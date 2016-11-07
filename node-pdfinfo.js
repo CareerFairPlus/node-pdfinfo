@@ -10,6 +10,7 @@ function pdfInfo() {
     return {
         "options": [],
         "_input": null,
+        "lambdaExecPath": false,
         "option": function (option) {
             this.options.push(option);
             return this;
@@ -18,27 +19,31 @@ function pdfInfo() {
             this._input = file;
             return this;
         },
+        "lambda": function (path) {
+            this.lambdaExecPath = path;
+            return this;
+        },
         "exec": function (callback) {
             var _this = this;
             if (!_this.input) {
                 return callback.call(_this, 'Input not selected');
             }
 
-            var process = spawn('pdfinfo/.pdfinfo', _this.options.concat([_this._input]));
+            var process = spawn(_this.lambdaExecPath ? _this.lambdaExecPath : 'pdfinfo', _this.options.concat([_this._input]));
             process.stdin.on('error', callback);
             process.stdout.on('error', callback);
 
-            var data = [];
+            var _data = [];
             var totalBytes = 0;
             process.stdout.on('data', function (data) {
                 totalBytes += data.length;
-                data.push(data);
+                _data.push(data);
             });
 
             process.on('close', function () {
-                var buffer = Buffer.concat(data, totalBytes);
+                var buffer = Buffer.concat(_data, totalBytes);
                 var input = buffer.toString();
-                if (input.contains('Error')) {
+                if (input === '' || input.includes('Error')) {
                     return callback.call(_this, 'File is not PDF');
                 }
                 var lines = input.split('\n');
